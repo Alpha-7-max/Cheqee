@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheqee - DeepSeek V3</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons (Still needed for header, buttons, etc.) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Color Palette & Theming */
+        :root {
+            /* Primary Color Theme (Indigo) */
+            --primary-color-rgb: 79, 70, 229; /* RGB for opacity usage */
+            --primary-color: #4f46e5; /* Indigo-600 */
+            --primary-color-hover: #4338ca; /* Indigo-700 */
+            --primary-text: #3730a3; /* Indigo-800 */
+            --primary-text-hover: #312e81; /* Indigo-900 */
+            --primary-bg-light: #eef2ff; /* Indigo-50 */
+            --primary-bg-medium: #e0e7ff; /* Indigo-100 */
+            --primary-border-light: #c7d2fe; /* Indigo-200 */
+
+            /* Neutral Color Theme (Gray/Custom) */
+            --neutral-bg-light: #F9F9FA; /* Custom Light Grayish White */
+            --neutral-bg-medium: #f3f4f6; /* Gray-100 */
+            --neutral-border: #E5E8EB; /* Custom Light Gray */
+            --neutral-text-primary: #1f2937; /* Gray-800 */
+            --neutral-text-secondary: #6b7280; /* Gray-500 */
+            --neutral-icon-bg: #e5e7eb; /* Gray-200 */
+            --neutral-icon-text: #4b5563; /* Gray-600 */
+
+            /* General UI */
+            --body-bg: #f9fafb; /* Gray-50 */
+            --container-bg: #ffffff; /* White */
+            --input-bg: #ffffff; /* White */
+            --input-border: #d1d5db; /* Gray-300 */
+            --input-focus-ring: rgba(var(--primary-color-rgb), 0.3); /* Lighter ring */
+
+            /* Scrollbar */
+            --scrollbar-track: #f3f4f6;
+            --scrollbar-thumb: #d1d5db;
+            --scrollbar-thumb-hover: #9ca3af;
+
+            /* Code Blocks */
+            --code-bg: #1e293b; /* Slate-800 */
+            --code-text: #e2e8f0; /* Slate-200 */
+            --code-copy-btn-bg: #334155; /* Slate-700 */
+            --code-copy-btn-hover-bg: #475569; /* Slate-600 */
+            --code-copy-btn-text: #cbd5e1; /* Slate-300 */
+
+            /* Error Message */
+            --error-bg: #fff1f2; /* Rose-50 */
+            --error-border: #ffccd1; /* Rose-100 */
+            --error-text: #be123c; /* Rose-700 */
+            --error-icon: #f43f5e; /* Rose-500 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--neutral-text-primary);
+            overscroll-behavior-y: contain; /* Prevent pull-to-refresh */
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+        /* Smooth Scrolling */
+        html, #chatbox { scroll-behavior: smooth; }
+
+        /* Message Fade-in Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-animate { animation: fadeIn 0.3s ease-out forwards; }
+
+        /* Blinking cursor */
+        .blinking-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em; /* Match line height */
+            background-color: var(--neutral-text-primary);
+            animation: blink 1s step-end infinite;
+            margin-left: 3px;
+            vertical-align: baseline; /* Align better with text */
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Input area focus */
+        #user-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--input-focus-ring); /* Slightly larger ring */
+            border-color: var(--primary-color);
+        }
+
+        /* Updated Message Card Styles */
+        .message-card {
+            padding: 0.8rem 1.1rem; /* Adjusted padding */
+            border-radius: 0.75rem; /* Slightly less rounded */
+            max-width: 85%; /* Adjusted max-width */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0,0,0,0.03); /* Subtle shadow */
+            word-wrap: break-word;
+            position: relative;
+            border-width: 1px; /* Ensure border is visible */
+            border-style: solid;
+            transition: box-shadow 0.2s ease-out;
+            /* Remove margin adjustments previously needed for avatar space */
+            /* margin-left: 0; */
+            /* margin-right: 0; */
+        }
+
+        /* Tail Effect */
+        .message-user .message-card {
+            border-bottom-right-radius: 0.25rem;
+        }
+        .message-assistant .message-card {
+            border-bottom-left-radius: 0.25rem;
+        }
+        /* Error messages also have tail */
+        .message-error .message-card {
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        /* REMOVED AVATAR STYLES */
+        /* .avatar { ... } */
+
+        /* Markdown Styling */
+        .prose {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-width: none;
+            color: inherit; /* Inherit text color from parent card */
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 { margin-top: 1em; margin-bottom: 0.5em; font-weight: 600; }
+        /* User message headings */
+        .message-user .prose h1, .message-user .prose h2, .message-user .prose h3 { color: var(--primary-text); }
+        /* AI message headings */
+        .message-assistant .prose h1, .message-assistant .prose h2, .message-assistant .prose h3 { color: var(--primary-color); }
+        .prose p { margin-bottom: 0.75em; }
+        .prose ul, .prose ol { margin-left: 1.25rem; margin-bottom: 0.75em; }
+        .prose li { margin-bottom: 0.25em; }
+        .prose blockquote {
+            border-left: 3px solid var(--primary-color);
+            padding-left: 0.8rem;
+            margin: 1em 0;
+            color: var(--neutral-text-secondary);
+            font-style: italic;
+        }
+        .message-user .prose blockquote {
+            border-left-color: rgba(var(--primary-color-rgb), 0.5);
+            color: rgba(var(--primary-color-rgb), 0.8);
+        }
+        .prose a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .prose a:hover { text-decoration: underline; color: var(--primary-color-hover); }
+        .message-user .prose a { color: var(--primary-text); }
+        .message-user .prose a:hover { color: var(--primary-text-hover); }
+
+        /* Code block styling */
+        .prose pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            position: relative;
+            margin: 1em 0;
+            font-size: 0.875em;
+            line-height: 1.4;
+        }
+        .prose code { font-family: 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", monospace; }
+        .prose pre code { background-color: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
+        /* Inline code */
+        .prose :not(pre) > code {
+            background-color: rgba(0,0,0,0.06);
+            color: var(--neutral-text-primary);
+            padding: 0.2em 0.4em;
+            border-radius: 0.3rem;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .message-user .prose :not(pre) > code {
+            background-color: rgba(var(--primary-color-rgb), 0.1);
+            color: var(--primary-text);
+        }
+
+        /* Copy button */
+        .copy-code-button {
+            position: absolute;
+            top: 0.6rem;
+            right: 0.6rem;
+            background-color: var(--code-copy-btn-bg);
+            color: var(--code-copy-btn-text);
+            border: none;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        .copy-code-button:hover { opacity: 1; background-color: var(--code-copy-btn-hover-bg); }
+        .copy-code-button i { margin-right: 4px; font-size: 0.8em; }
+
+        /* Error Message Styling (no avatar specific styles needed now) */
+        .message-error .message-card {
+            background-color: var(--error-bg);
+            border-color: var(--error-border);
+            color: var(--error-text);
+            /* max-width adjusted for error messages if needed, currently uses general max-width */
+        }
+        .message-error .prose {
+            color: var(--error-text); /* Ensure prose text inherits error color */
+        }
+        .message-error .prose a { color: var(--error-text); font-weight: 600; } /* Error link style */
+        .message-error .prose a:hover { text-decoration: underline; }
+        .message-error .prose blockquote { border-left-color: var(--error-icon); color: var(--error-text); opacity: 0.9; }
+        .message-error .prose :not(pre) > code { background-color: rgba(244, 63, 94, 0.1); color: var(--error-text); } /* Error inline code */
+
+
+        /* Mobile Optimizations */
+        @media (max-width: 640px) {
+            .message-card { max-width: 90%; }
+            #chat-container { max-width: 100%; box-shadow: none; border-radius: 0; }
+            body { background-color: var(--container-bg); }
+            .header { border-radius: 0; }
+            .input-area { border-radius: 0; }
+            .prose { font-size: 0.9rem; }
+            /* Remove spacing adjustments as avatars are gone */
+            /* .message-user { space-x: 0 !important; } */
+            /* .message-assistant { space-x: 0 !important; } */
+        }
+
+        /* Adjust input area height dynamically */
+        #user-input {
+            min-height: 44px; /* Ensure minimum tap height */
+            max-height: 120px; /* Limit growth */
+            overflow-y: auto; /* Enable scroll when max height is reached */
+        }
+        #send-button {
+            height: 44px; /* Match min-height of textarea */
+            width: 44px; /* Make it square */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        /* Align message card directly to the sides */
+        .message-wrapper.justify-end .message-card { margin-left: auto; }
+        .message-wrapper.justify-start .message-card { margin-right: auto; }
+
+    </style>
+</head>
+
+<body class="flex justify-center">
+
+    <div id="chat-container" class="flex flex-col h-screen w-full max-w-3xl bg-white shadow-xl overflow-hidden md:rounded-lg">
+
+        <!-- Header -->
+        <header class="header bg-white p-3 sm:p-4 flex justify-between items-center border-b border-gray-200 flex-shrink-0 md:rounded-t-lg">
+            <div class="flex items-center space-x-3">
+                 <div class="p-2 rounded-full bg-indigo-100 text-indigo-600">
+                     <i class="fas fa-feather-alt text-lg"></i>
+                 </div>
+                 <div>
+                    <h1 class="text-base sm:text-lg font-semibold text-gray-800">Cheqee</h1>
+                    <span class="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">llama 3.3</span>
+                 </div>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                 <button id="clear-chat-button" title="Clear Chat History" class="text-gray-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-gray-100">
+                     <i class="fas fa-trash-alt text-sm sm:text-base"></i>
+                 </button>
+            </div>
+         </header>
+
+        <!-- Chat messages container -->
+        <div id="chatbox" class="flex-grow overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-100">
+            <!-- Messages will be appended here -->
+        </div>
+
+        <!-- Input area -->
+        <div class="input-area p-3 sm:p-4 bg-gray-100 border-t border-gray-200 flex-shrink-0 md:rounded-b-lg">
+            <form id="chat-form" class="flex items-end space-x-2 sm:space-x-3">
+                <textarea id="user-input"
+                       class="flex-1 p-2.5 border border-gray-300 rounded-lg resize-none bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500 transition duration-200 ease-in-out placeholder-gray-400 text-sm sm:text-base"
+                       placeholder="Type your message..."
+                       rows="1"></textarea>
+                <button id="send-button" type="submit"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold p-2 rounded-lg transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        disabled> <!-- Initially disabled -->
+                    <i class="fas fa-paper-plane text-lg"></i>
+                </button>
+            </form>
+        </div>
+
+    </div> <!-- End chat-container -->
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const chatForm = document.getElementById('chat-form');
+        const clearChatButton = document.getElementById('clear-chat-button');
+
+        // --- Configuration ---
+        const API_KEY = "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";
+        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+        const MODEL_NAME = "llama-3.3-70b-versatile";
+        const YOUR_SITE_URL = "https://elysianchat.example.com";
+        const YOUR_APP_NAME = "Cheqee";
+
+        // --- State ---
+        let conversationHistory = [];
+        let isLoading = false;
+        const initialSystemPrompt = `Just respond in Roman Urdu; don't use any other language. Understand the user's emotions and respond accordingly. Your name is Cheqee, and don't reveal your real name. You need to respond with a girl's personality, feeling like you are a girl.
+
+
+.`;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversation();
+            adjustTextareaHeight();
+            updateSendButtonState();
+            userInput.focus(); // Ensure focus on load
+        });
+
+        // --- Event Listeners ---
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled) {
+                    sendMessage();
+                }
+            }
+        });
+
+        userInput.addEventListener('input', () => {
+            adjustTextareaHeight();
+            updateSendButtonState();
+        });
+
+        clearChatButton.addEventListener('click', clearChat);
+
+        // --- Core Functions ---
+        function updateSendButtonState() {
+            sendButton.disabled = userInput.value.trim().length === 0 || isLoading;
+        }
+
+        function adjustTextareaHeight() {
+            userInput.style.height = 'auto';
+            const scrollHeight = userInput.scrollHeight;
+            const maxHeight = 120; // Matches max-h CSS
+
+            if (scrollHeight <= maxHeight) {
+                userInput.style.height = `${scrollHeight}px`;
+                userInput.style.overflowY = 'hidden';
+            } else {
+                userInput.style.height = `${maxHeight}px`;
+                userInput.style.overflowY = 'auto';
+            }
+        }
+
+        function addMessageToChatbox(role, content, isStreaming = false, isError = false) {
+            const messageWrapper = document.createElement('div');
+            // Base classes + role-specific + REMOVED spacing for avatar
+            messageWrapper.className = `flex message-wrapper message-${role} message-animate`; // Added message-wrapper class
+
+            // REMOVED AVATAR CREATION
+            // const avatar = document.createElement('div');
+            // avatar.className = 'avatar'; // Base avatar class
+            // const icon = document.createElement('i');
+            // icon.className = 'fas'; // Base icon class
+
+            const messageCard = document.createElement('div');
+            // Base card classes + prose for markdown
+            messageCard.className = 'message-card prose';
+
+            // Apply role-specific styles using Tailwind classes
+            if (role === 'user') {
+                // Align card to the right
+                messageWrapper.classList.add('justify-end');
+                // User message card style
+                messageCard.classList.add(
+                    'bg-indigo-50',
+                    'border-indigo-100',
+                    'text-indigo-900',
+                    'ml-auto' // Ensure it aligns right when wrapper is full width potentially
+                );
+                 // Limit width slightly more for user to distinguish
+                 messageCard.style.maxWidth = '80%';
+            } else { // assistant or error
+                // Align card to the left
+                messageWrapper.classList.add('justify-start');
+
+                if (isError) {
+                    messageWrapper.classList.add('message-error'); // Add error class for styling
+                    // REMOVED ERROR AVATAR STYLES
+                    messageCard.classList.add(
+                        'bg-red-50',          // Error background
+                        'border-red-200',     // Error border
+                        'text-red-800',       // Error text
+                        'mr-auto' // Ensure it aligns left
+                    );
+                     messageCard.style.maxWidth = '85%'; // Use slightly more width for errors/AI
+                } else {
+                    // REMOVED AI AVATAR STYLES
+                    messageCard.classList.add(
+                        'bg-gray-50',
+                        'border-gray-200',
+                        'text-gray-800',
+                        'mr-auto' // Ensure it aligns left
+                    );
+                    messageCard.style.maxWidth = '85%'; // Use slightly more width for errors/AI
+                }
+            }
+            // REMOVED AVATAR ICON LOGIC
+
+            // Handle content rendering
+            if (isStreaming && !isError) {
+                messageCard.innerHTML = '<span class="streaming-text"></span><span class="blinking-cursor"></span>';
+            } else {
+                 renderMarkdown(messageCard, content);
+            }
+
+            // REMOVED AVATAR APPEND
+            // messageWrapper.appendChild(avatar);
+            messageWrapper.appendChild(messageCard); // Append only the message card
+
+            chatbox.appendChild(messageWrapper);
+            scrollToBottom(true);
+            return messageWrapper;
+        }
+
+
+        function renderMarkdown(element, markdownContent) {
+            if (typeof marked === 'undefined') {
+                console.error("Marked library is not loaded.");
+                element.textContent = markdownContent || '';
+                return;
+            }
+            try {
+                const sanitizer = (html) => {
+                    const SCRIPT_REGEX = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+                    return html.replace(SCRIPT_REGEX, "");
+                };
+                const rawHTML = marked.parse(markdownContent || '', { breaks: true, gfm: true });
+                const sanitizedHTML = sanitizer(rawHTML);
+                element.innerHTML = sanitizedHTML;
+                addCopyButtons(element);
+            } catch (error) {
+                console.error("Error parsing Markdown:", error);
+                element.textContent = markdownContent || ''; // Fallback on error
+            }
+        }
+
+
+        function addCopyButtons(container) {
+            const codeBlocks = container.querySelectorAll('pre');
+            codeBlocks.forEach(pre => {
+                if (pre.querySelector('.copy-code-button')) return;
+                if (!pre.parentNode || !pre.parentNode.classList.contains('prose')) {
+                    pre.style.position = 'relative'; // Ensure relative positioning if not within prose
+                }
+
+                const code = pre.querySelector('code');
+                if (!code) return; // Skip if no code element found
+
+                const button = document.createElement('button');
+                button.className = 'copy-code-button';
+                button.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                button.setAttribute('aria-label', 'Copy code to clipboard'); // Accessibility
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent potential parent handlers
+                    navigator.clipboard.writeText(code.innerText)
+                        .then(() => {
+                            button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                            setTimeout(() => { button.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy text: ', err);
+                            button.innerText = 'Error';
+                            setTimeout(() => { button.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+                        });
+                });
+                pre.appendChild(button);
+            });
+        }
+
+        function updateStreamingMessage(messageElement, deltaContent) {
+            const messageCard = messageElement.querySelector('.message-card');
+            if (!messageCard) return;
+
+            let streamingTextSpan = messageCard.querySelector('.streaming-text');
+            let cursorSpan = messageCard.querySelector('.blinking-cursor');
+
+            if (!streamingTextSpan || !cursorSpan) {
+                 messageCard.innerHTML = '<span class="streaming-text"></span><span class="blinking-cursor"></span>';
+                 streamingTextSpan = messageCard.querySelector('.streaming-text');
+                 cursorSpan = messageCard.querySelector('.blinking-cursor');
+            }
+
+            let fullContent = messageCard.getAttribute('data-full-content') || "";
+            fullContent += deltaContent;
+            messageCard.setAttribute('data-full-content', fullContent);
+
+            const rawHTML = marked.parse(fullContent, { breaks: true, gfm: true });
+            streamingTextSpan.innerHTML = rawHTML;
+
+            messageCard.appendChild(cursorSpan);
+
+            addCopyButtons(streamingTextSpan);
+            scrollToBottom();
+        }
+
+        function finalizeStreamingMessage(messageElement, finalContent) {
+             const messageCard = messageElement.querySelector('.message-card');
+             if (messageCard) {
+                 renderMarkdown(messageCard, finalContent || '');
+                 messageCard.removeAttribute('data-full-content');
+                 scrollToBottom();
+             }
+         }
+
+        function displayError(errorMessage) {
+            addMessageToChatbox('assistant', errorMessage, false, true); // Use 'assistant' role with error flag
+            scrollToBottom(true);
+        }
+
+
+        function sendMessage() {
+            const userMessage = userInput.value.trim();
+            if (!userMessage || isLoading) return;
+
+            setLoadingState(true);
+
+            addMessageToChatbox('user', userMessage);
+            conversationHistory.push({ role: 'user', content: userMessage });
+            saveConversation();
+
+            userInput.value = '';
+            adjustTextareaHeight();
+
+            const botMessageElement = addMessageToChatbox('assistant', '', true);
+
+            const messagesToSend = conversationHistory.some(msg => msg.role === 'system')
+                ? [...conversationHistory]
+                : [{ role: "system", content: initialSystemPrompt }, ...conversationHistory];
+
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: messagesToSend,
+                    model: MODEL_NAME,
+                    temperature: 0.7,
+                    max_completion_tokens: 32000,
+                    top_p: 1,
+                    stream: true,
+                    stop: null
+                })
+            })
+            .then(response => {
+                 if (!response.ok) {
+                    return response.json().then(errData => {
+                        const detail = errData.error?.message || response.statusText;
+                        const statusCode = response.status;
+                        throw new Error(`API Error (${statusCode}): ${detail}`);
+                    }).catch(parseErr => {
+                        throw new Error(`API Error (${response.status}): ${response.statusText}. Failed to parse error response body.`);
+                    });
+                 }
+
+                 const reader = response.body.getReader();
+                 const decoder = new TextDecoder();
+                 let accumulatedContent = "";
+
+                 function processStream({ done, value }) {
+                     if (done) {
+                         finalizeStreamingMessage(botMessageElement, accumulatedContent);
+                         if(conversationHistory[conversationHistory.length - 1]?.role !== 'assistant') {
+                            conversationHistory.push({ role: 'assistant', content: accumulatedContent });
+                         } else {
+                            conversationHistory[conversationHistory.length - 1].content = accumulatedContent;
+                         }
+                         saveConversation();
+                         setLoadingState(false);
+                         return;
+                     }
+
+                     const chunk = decoder.decode(value, { stream: true });
+                     const lines = chunk.split('\n');
+                     lines.forEach(line => {
+                         if (line.startsWith('data: ')) {
+                             const dataContent = line.substring(6).trim();
+                             if (dataContent === '[DONE]') return;
+
+                             try {
+                                 const parsed = JSON.parse(dataContent);
+                                 if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                                     const deltaContent = parsed.choices[0].delta.content;
+                                     accumulatedContent += deltaContent;
+                                     updateStreamingMessage(botMessageElement, deltaContent);
+                                 }
+                             } catch (e) {
+                                 // console.warn("Could not parse stream chunk or empty delta:", dataContent, e);
+                             }
+                         }
+                     });
+                     return reader.read().then(processStream);
+                 }
+                 return reader.read().then(processStream);
+             })
+             .catch(error => {
+                 console.error("Fetch Error Details:", error);
+                 if (botMessageElement) {
+                     botMessageElement.remove();
+                 }
+                 let errorText = "Maaf kijye, aik anjana masla pesh aa gaya hai. Baraye meharbani thori dair baad dobara koshish karen. 🙏";
+                 if (error.message.includes("API Error")) {
+                     errorText = `Maaf kijye, server se jawab mein masla hai: ${error.message}. Baraye meharbani apni API key check karen ya baad mein koshish karen. 🤔`;
+                 } else if (error instanceof TypeError && error.message.includes('fetch')) {
+                     errorText = "Maaf kijye, network connection ka masla lag raha hai. Kya aap apna internet connection check kar sakte hain? 📶";
+                 }
+                 displayError(errorText);
+                 setLoadingState(false);
+             });
+        }
+
+        function setLoadingState(loading) {
+            isLoading = loading;
+            userInput.disabled = loading;
+            updateSendButtonState();
+
+            sendButton.innerHTML = loading
+                 ? '<i class="fas fa-spinner fa-spin text-lg"></i>'
+                 : '<i class="fas fa-paper-plane text-lg"></i>';
+             if (!loading) {
+                 userInput.focus();
+             }
+        }
+
+        function scrollToBottom(force = false) {
+            const isScrolledToBottom = chatbox.scrollHeight - chatbox.clientHeight <= chatbox.scrollTop + 80;
+            if (force || isScrolledToBottom) {
+                 setTimeout(() => {
+                    chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: 'smooth' });
+                 }, 50);
+            }
+        }
+
+
+        // --- Local Storage ---
+        function saveConversation() {
+            try {
+                const historyToSave = conversationHistory;
+                if (historyToSave.length > (conversationHistory[0]?.role === 'system' ? 1 : 0)) {
+                    localStorage.setItem('cheqeeChatHistory', JSON.stringify(historyToSave));
+                } else {
+                    localStorage.removeItem('cheqeeChatHistory');
+                }
+            } catch (e) {
+                console.error("Could not save conversation to localStorage:", e);
+                if (e.name === 'QuotaExceededError') {
+                     console.warn("Warning: Chat history is too large and could not be saved. Consider clearing the chat.");
+                }
+            }
+        }
+
+        function loadConversation() {
+             const savedHistory = localStorage.getItem('cheqeeChatHistory');
+             chatbox.innerHTML = '';
+
+             if (savedHistory) {
+                 try {
+                    let loadedHistory = JSON.parse(savedHistory);
+                    if (!loadedHistory.length || loadedHistory[0].role !== 'system') {
+                         conversationHistory = [{ role: "system", content: initialSystemPrompt }, ...loadedHistory];
+                    } else {
+                        loadedHistory[0].content = initialSystemPrompt;
+                        conversationHistory = loadedHistory;
+                    }
+                    conversationHistory.slice(1).forEach(message => {
+                        addMessageToChatbox(message.role, message.content);
+                    });
+                 } catch (e) {
+                    console.error("Could not parse saved conversation:", e);
+                    localStorage.removeItem('cheqeeChatHistory');
+                    initializeNewConversation();
+                 }
+             } else {
+                 initializeNewConversation();
+             }
+             if (conversationHistory.length === 1) {
+                // Optional: Initial welcome message
+                // addMessageToChatbox('assistant', " Mein aap ki kaise madad kar sakti hoon? 😊");
+             }
+             scrollToBottom(true);
+         }
+
+         function initializeNewConversation() {
+            conversationHistory = [{ role: "system", content: initialSystemPrompt }];
+            // Optional: Display initial static welcome message
+            // addMessageToChatbox('assistant', " Mein aap ki kaise madad kar sakti hoon? 😊");
+         }
+
+        function clearChat() {
+            initializeNewConversation();
+            localStorage.removeItem('cheqeeChatHistory');
+            chatbox.innerHTML = '';
+            isLoading = false;
+            setLoadingState(false);
+            userInput.value = '';
+            adjustTextareaHeight();
+            updateSendButtonState();
+            userInput.focus();
+        }
+
+        // --- Marked Configuration ---
+        if (typeof marked !== 'undefined') {
+             marked.setOptions({
+                 breaks: true,
+                 gfm: true,
+             });
+        } else {
+            console.error("Marked library not loaded. Markdown rendering will not work.");
+        }
+
+    </script>
+</body>
+</html>
