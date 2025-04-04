@@ -315,9 +315,9 @@
         const clearChatButton = document.getElementById('clear-chat-button');
 
         // --- Configuration ---
-        const API_KEY = "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";
-        const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-        const MODEL_NAME = "google/gemma-3-27b-it:free";
+        const API_KEY = "AIzaSyAumsk0dJWP1ZTI5rW8dg1yFcu5InxAA2c";
+        const API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
+        const MODEL_NAME = "gemini-2.0-flash";
         const YOUR_SITE_URL = "";
         const YOUR_APP_NAME = "Cheqee";
 
@@ -566,17 +566,16 @@
             fetch(API_URL, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
+                    'x-goog-api-key': API_KEY,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    messages: messagesToSend,
-                    model: MODEL_NAME,
-                    temperature: 0.7,
-                    max_completion_tokens: 1024,
-                    top_p: 1,
-                    stream: true,
-                    stop: null
+                    contents: [{
+                        parts: [{
+                            text: messagesToSend.map(msg => `${msg.role}: ${msg.content}`).join('\n')
+                        }]
+                    }],
+                    safetySettings: []
                 })
             })
             .then(response => {
@@ -607,24 +606,16 @@
                      }
 
                      const chunk = decoder.decode(value, { stream: true });
-                     const lines = chunk.split('\n');
-                     lines.forEach(line => {
-                         if (line.startsWith('data: ')) {
-                             const dataContent = line.substring(6).trim();
-                             if (dataContent === '[DONE]') return;
-
-                             try {
-                                 const parsed = JSON.parse(dataContent);
-                                 if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                                     const deltaContent = parsed.choices[0].delta.content;
-                                     accumulatedContent += deltaContent;
-                                     updateStreamingMessage(botMessageElement, deltaContent);
-                                 }
-                             } catch (e) {
-                                 // console.warn("Could not parse stream chunk or empty delta:", dataContent, e);
-                             }
+                     try {
+                         const response = JSON.parse(chunk);
+                         if (response.candidates && response.candidates[0].content.parts[0].text) {
+                             const deltaContent = response.candidates[0].content.parts[0].text;
+                             accumulatedContent += deltaContent;
+                             updateStreamingMessage(botMessageElement, deltaContent);
                          }
-                     });
+                     } catch (e) {
+                         console.warn("Could not parse response chunk:", e);
+                     }
                      return reader.read().then(processStream);
                  }
                  return reader.read().then(processStream);
