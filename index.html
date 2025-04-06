@@ -315,19 +315,19 @@
         const clearChatButton = document.getElementById('clear-chat-button');
 
         // --- Configuration ---
-        const API_KEY = "AIzaSyAumsk0dJWP1ZTI5rW8dg1yFcu5InxAA2c";
+        const API_KEY = "AIzaSyDSF270Y1VJf1fe4G8ZAuw7bOITbAlal74";
         const API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
-        const MODEL_NAME = "gemini-2.0-flash";
+        const MODEL_NAME = "gemma-3-27b-it";
         const YOUR_SITE_URL = "";
         const YOUR_APP_NAME = "Cheqee";
 
         // --- State ---
         let conversationHistory = [];
         let isLoading = false;
-        const initialSystemPrompt = `Just respond in Roman Urdu; don't use any other language.
-
-
-.`;
+        const initialSystemPrompt = `Only respond in Roman Urdu—do not use any other language at all.
+        
+  you need to connect deeply user emotions and you focused on imaginations for detiled response and you dont show your real name gemma alternative your name is Cheqee
+  and you developed by unknown person not google `;
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
